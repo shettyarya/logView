@@ -1,0 +1,23 @@
+2025-05-12 09:00:00 - This script will perform major changes.
+2025-05-12 09:00:02 - === Disaster Recovery Execution Started at: 2025-05-12 09:00:02 ===
+2025-05-12 09:00:03 - STEP 1: Shutdown Application Servers
+2025-05-12 09:00:03 - STEP 1: Starting: Shutdown App Servers
+2025-05-12 09:00:03 - STEP 2: Backup Configuration Files
+2025-05-12 09:00:03 - STEP 2: Starting: Backup Configs
+2025-05-12 09:00:48 - STEP 2: SUCCESS: backup configs (Start: 2025-05-12 09:00:03, End: 2025-05-12 09:00:48)
+2025-05-12 09:00:48 - STEP 2: Completed in 45 seconds
+2025-05-12 09:00:52 - STEP 1: FAILED: Simulated failure for testing
+2025-05-12 09:00:52 - STEP 1: Completed in 49 seconds
+2025-05-12 09:00:55 - STEP 3: Create Read Replica of Production DB
+2025-05-12 09:00:55 - STEP 3: Starting: Create Read Replica
+2025-05-12 09:00:55 - STEP 4: Sync Media Files to Backup Server
+2025-05-12 09:00:55 - STEP 4: Starting: Sync Media Files
+2025-05-12 09:05:30 - STEP 4: SUCCESS: sync media files (Start: 2025-05-12 09:00:55, End: 2025-05-12 09:05:30)
+2025-05-12 09:05:30 - STEP 4: Completed in 275 seconds
+2025-05-12 09:06:12 - STEP 3: SUCCESS: create read replica (Start: 2025-05-12 09:00:55, End: 2025-05-12 09:06:12)
+2025-05-12 09:06:12 - STEP 3: Completed in 317 seconds
+2025-05-12 09:06:15 - STEP 5: Update DNS Records
+2025-05-12 09:06:15 - STEP 5: Starting: Update DNS
+2025-05-12 09:06:30 - STEP 5: SUCCESS: update DNS (Start: 2025-05-12 09:06:15, End: 2025-05-12 09:06:30)
+2025-05-12 09:06:30 - STEP 5: Completed in 15 seconds
+2025-05-12 09:06:40 - === Disaster Recovery Execution Completed at: 2025-05-12 09:06:40 ===

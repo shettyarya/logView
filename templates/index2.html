@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <title>Log Visualizer</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style2.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+</head>
+<body>
+
+  <button id="theme-toggle">🌙 Dark Mode</button>
+  <h2>Log Data Visualization</h2>
+
+  <label for="chartType">Choose Chart Type:</label>
+  <select id="chartType">
+    <option value="bar">Bar</option>
+    <option value="pie">Pie</option>
+    <option value="line">Line</option>
+  </select>
+
+  <div style="margin-top: 10px;">
+    <label for="rtoInput">RTO (mins):</label>
+    <input type="number" id="rtoInput" min="0" style="width: 50px;">
+    
+    <label for="rpoInput" style="margin-left: 20px;">RPO (mins):</label>
+    <input type="number" id="rpoInput" min="0" style="width: 50px;">
+  </div>
+
+  <br>
+  <button onclick="loadChart()">Show Chart</button>
+
+  <div id="total-time" style="margin-top: 10px; font-size: 18px;"></div>
+  <div id="dr-drill-status" style="margin-top: 12px; font-weight: bold;"></div>
+
+  <div id="chart-container" style="position: relative; width: 80%; height: 400px; margin-top: 20px;">
+    <canvas id="logChart"></canvas>
+    <div id="no-data-message" style="color: red; font-size: 18px; margin-top: 10px;"></div>
+  </div>
+
+  <div id="error-messages" style="margin-top: 20px; color: red; font-size: 16px;"></div>
+
+  <script>
+    let chartInstance = null;
+
+    function loadChart() {
+      const chartType = document.getElementById('chartType').value;
+      const rtoInput = parseFloat(document.getElementById('rtoInput').value); // Get RTO value in minutes
+      const drDrillStatus = document.getElementById('dr-drill-status'); // Element to display DR drill status
+
+      fetch('/get_chart_data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chart_type: chartType })
+      })
+      .then(res => res.json())
+      .then(data => {
+        const noDataMsg = document.getElementById('no-data-message');
+        const errorMessages = document.getElementById('error-messages');
+        const totalTimeElement = document.getElementById('total-time');
+
+        if (data.message !== 'Success') {
+          noDataMsg.textContent = data.message;
+          errorMessages.innerHTML = ''; // Clear previous errors
+          drDrillStatus.textContent = ''; // Clear DR drill status
+          if (chartInstance) chartInstance.destroy();
+          return;
+        }
+
+        noDataMsg.textContent = '';
+        errorMessages.innerHTML = data.errors.length > 0 
+          ? `<h3 style="margin-bottom: 10px; font-family: inherit; font-size: 18px; color: var(--text-color);">Errors</h3>
+             <table id="error-table">
+               <thead>
+                 <tr>
+                   <th>Log File Name</th>
+                   <th>Date</th>
+                   <th>Time</th>
+                   <th>Step Number</th>
+                   <th>Error Details</th>
+                 </tr>
+               </thead>
+               <tbody>
+                 ${data.errors.map(error => {
+                   const [logFileName, stepNumber, errorDetails, date, time] = error.split('|');
+                   return `<tr>
+                             <td>${logFileName}</td>
+                             <td>${date}</td>
+                             <td>${time}</td>
+                             <td>${stepNumber}</td>
+                             <td>${errorDetails}</td>
+                           </tr>`;
+                 }).join('')}
+               </tbody>
+             </table>` 
+          : '';
+
+        // Calculate total time from average durations
+        const totalTime = data.values.reduce((acc, val) => acc + val, 0);
+        const totalMinutes = Math.floor(totalTime / 60);
+        const totalSeconds = Math.round(totalTime % 60);
+        totalTimeElement.textContent = `Total Time: ${totalMinutes}m ${totalSeconds}s`;
+
+        // Check if DR drill was completed in time
+        if (!isNaN(rtoInput)) {
+          if (totalMinutes <= rtoInput) {
+            drDrillStatus.textContent = '✅ DR Drill completed in time.';
+            drDrillStatus.style.color = 'green';
+          } else {
+            drDrillStatus.textContent = '❌ DR Drill not completed in time.';
+            drDrillStatus.style.color = 'red';
+          }
+        } else {
+          drDrillStatus.textContent = ''; // Clear status if RTO is not provided
+        }
+
+        // Destroy old chart if exists
+        if (chartInstance) chartInstance.destroy();
+
+        const ctx = document.getElementById('logChart').getContext('2d');
+
+        const backgroundColors = data.labels.map((_, i) => 
+          `hsl(${(i * 360 / data.labels.length)}, 70%, 60%)`
+        );
+
+        chartInstance = new Chart(ctx, {
+          type: chartType,
+          data: {
+            labels: data.labels,
+            datasets: [{
+              label: 'Avg Duration',
+              data: data.values,
+              backgroundColor: chartType === 'pie' ? backgroundColors : '#3498db',
+              borderColor: '#2980b9',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: chartType === 'pie' },
+              datalabels: {
+                display: chartType === 'bar',
+                anchor: 'end',
+                align: 'top',
+                formatter: val => {
+                  const min = Math.floor(val / 60);
+                  const sec = Math.round(val % 60);
+                  return `${min}m ${sec}s`;
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: ctx => {
+                    const val = ctx.raw;
+                    const min = Math.floor(val / 60);
+                    const sec = Math.round(val % 60);
+                    return `${ctx.dataset.label}: ${min}m ${sec}s`;
+                  }
+                }
+              }
+            },
+            scales: chartType === 'pie' ? {} : {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: 'Duration (minutes)'
+                },
+                ticks: {
+                  callback: function (value) {
+                    return `${Math.floor(value / 60)}m`;
+                  }
+                }
+              }
+            }
+          },
+          plugins: [ChartDataLabels]
+        });
+      });
+    }
+
+    // Theme toggle
+    const themeToggle = document.getElementById('theme-toggle');
+    const currentTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    themeToggle.textContent = currentTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+
+    themeToggle.addEventListener('click', () => {
+      const newTheme = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      themeToggle.textContent = newTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+    });
+  </script>
+</body>
+</html>
