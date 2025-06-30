@@ -42,6 +42,7 @@ h2 {
 
 #chart-container {
     display: flex;
+    flex-direction: column; /* Add this line */
     justify-content: center;
     align-items: center;
     width: 100%;
@@ -123,8 +124,12 @@ display: inline-block; /* Ensures padding takes effect properly */
 }
 
 #no-data-message {
-font-size: 20px;
-margin-top: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+  text-align: center;
 }
 
 #logFile {

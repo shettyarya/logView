@@ -60,7 +60,7 @@
         const totalTimeElement = document.getElementById('total-time');
 
         if (data.message !== 'Success') {
-          noDataMsg.textContent = data.message;
+          noDataMsg.innerHTML = `<span style="display: flex; justify-content: center; align-items: center; height: 100%; width: 100%; text-align: center;">${data.message}</span>`;
           errorMessages.innerHTML = ''; // Clear previous errors
           drDrillStatus.textContent = ''; // Clear DR drill status
           if (chartInstance) chartInstance.destroy();
